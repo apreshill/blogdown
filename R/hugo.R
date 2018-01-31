@@ -42,7 +42,7 @@ theme_flag = function(config = load_config()) {
 
 change_config = function(name, value) {
   f = find_config()
-  x = readUTF8(f)
+  x = read_utf8(f)
   if (f == 'config.toml') {
     r = sprintf('^%s\\s*=.+', name)
     v = if (!is.na(value)) paste(name, value, sep = ' = ')
@@ -58,7 +58,7 @@ change_config = function(name, value) {
   } else {
     x = c(v, x)  # append new config and write out
   }
-  writeUTF8(x, f)
+  write_utf8(x, f)
   invisible(list(text = x0, file = f))
 }
 
@@ -100,7 +100,7 @@ new_site = function(
   if (!force) warning("The directory '", dir, "' is not empty")
   if (install_hugo) tryCatch(find_hugo(), error = function(e) install_hugo())
   if (hugo_cmd(
-    c('new site', shQuote(path.expand(dir)), if (force) '--force', '-f', format),
+    c('new', 'site', shQuote(path.expand(dir)), if (force) '--force', '-f', format),
     stdout = FALSE
   ) != 0) return(invisible())
 
@@ -151,7 +151,8 @@ install_theme = function(theme, theme_example = FALSE, update_config = TRUE, for
       sprintf('https://github.com/%s/archive/%s.zip', theme, branch), zipfile, mode = 'wb'
     )
     files = utils::unzip(zipfile)
-    zipdir = dirname(files[1])
+    zipdir = dirname(files)
+    zipdir = zipdir[which.min(nchar(zipdir))]
     expdir = file.path(zipdir, 'exampleSite')
     if (dir_exists(expdir)) if (theme_example) {
       file.copy(list.files(expdir, full.names = TRUE), '../', recursive = TRUE)
@@ -236,6 +237,10 @@ content_file = function(path) file.path(get_config('contentDir', 'content'), pat
 #'   generated from the filename by removing the date and filename extension,
 #'   e.g., if \code{file = 'post/2015-07-23-hi-there.md'}, \code{slug} will be
 #'   \code{hi-there}. Set \code{slug = ''} if you do not want it.
+#' @param title_case A function to convert the title to title case. If
+#'   \code{TRUE}, the function is \code{tools::\link[tools]{toTitleCase}()}).
+#'   This argument is not limited to title case conversion. You can provide an
+#'   arbitrary R function to convert the title.
 #' @param subdir If specified (not \code{NULL}), the post will be generated
 #'   under a subdirectory under \file{content/}. It can be a nested subdirectory
 #'   like \file{post/joe/}.
@@ -251,6 +256,7 @@ content_file = function(path) file.path(get_config('contentDir', 'content'), pat
 new_post = function(
   title, kind = 'default', open = interactive(), author = getOption('blogdown.author'),
   categories = NULL, tags = NULL, date = Sys.Date(), file = NULL, slug = NULL,
+  title_case = getOption('blogdown.title_case'),
   subdir = getOption('blogdown.subdir', 'post'), ext = getOption('blogdown.ext', '.md')
 ) {
   if (is.null(file)) file = post_filename(title, subdir, ext, date)
@@ -261,6 +267,8 @@ new_post = function(
   if (generator() == 'hugo') file = new_content(file, kind, FALSE) else {
     writeLines(c('---', '', '---'), file)
   }
+  if (isTRUE(title_case)) title_case = tools::toTitleCase
+  if (is.function(title_case)) title = title_case(title)
 
   do.call(modify_yaml, c(list(
     file, title = title, author = author, date = format(date), slug = slug,

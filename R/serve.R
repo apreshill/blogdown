@@ -20,6 +20,8 @@
 #'   hence you cannot customize these arguments).
 #' @export
 serve_site = function(...) {
+  op = options(servr.daemon = getOption('servr.daemon', interactive()))
+  on.exit(options(op), add = TRUE)
   serve = switch(
     generator(), hugo = serve_it(),
     jekyll = serve_it(
@@ -51,6 +53,11 @@ serve_it = function(
     owd = setwd(site_root(config)); on.exit(setwd(owd), add = TRUE)
 
     if (!getOption('blogdown.generator.server', FALSE)) {
+      if (is_windows() && getOption('servr.daemon', FALSE)) {
+        if (!knitr:::loadable('later')) stop(
+          "Please install the 'later' package: install.packages('later')", call. = FALSE
+        )
+      }
       build_site(TRUE)
       n = nchar(pdir)
       return(servr::httw(site.dir = pdir, baseurl = baseurl, handler = function(...) {
@@ -73,7 +80,6 @@ serve_it = function(
     g = generator()
     cmd = if (g == 'hugo') find_hugo() else g
     host = server$host; port = server$port; intv = server$interval
-    if (is.null(server$url)) server$url = sprintf('http://%s:%d', host, port)
     args_fun = match.fun(paste0(g, '_server_args'))
     cmd_args = args_fun(host, port)
     p1 = proc_new(cmd, cmd_args)

@@ -56,7 +56,11 @@ dir_rename = function(from, to, clean = FALSE) {
   if (!dir_exists(from)) return()
   if (clean) unlink(to, recursive = TRUE)
   dir_create(dirname(to))
-  file.rename(from, to)
+  # I don't know why file.rename() might fail, but if it fails, fall back to
+  # file.copy(): https://github.com/rstudio/blogdown/issues/232
+  suppressWarnings(file.rename(from, to)) || {
+    file.copy(from, dirname(to), recursive = TRUE) && unlink(from, recursive = TRUE)
+  }
 }
 
 dirs_rename = function(from, to, ...) {
@@ -116,10 +120,9 @@ download2 = function(url, ...) {
   download = function(method = 'auto', extra = getOption('download.file.extra')) {
     download.file(url, ..., method = method, extra = extra)
   }
-  if (is_windows())
-    return(tryCatch(download(method = 'wininet'), error = function(e) {
-      download()  # try default method if wininet fails
-    }))
+  if (is_windows()) for (method in c('libcurl', 'wininet', 'auto')) {
+    if (!inherits(try(res <- download(method = method)), 'try-error') && res == 0) return(res)
+  }
 
   R340 = getRversion() >= '3.4.0'
   if (R340 && download() == 0) return(0L)
@@ -215,7 +218,7 @@ site_root = function(...) {
 
 # a simple parser that only reads top-level options unless RcppTOML is available
 parse_toml = function(
-  f, x = readUTF8(f), strict = requireNamespace('RcppTOML', quietly = TRUE)
+  f, x = read_utf8(f), strict = requireNamespace('RcppTOML', quietly = TRUE)
 ) {
   if (strict) {
     if (no_file <- missing(f)) f = paste(x, collapse = '\n')
@@ -449,7 +452,7 @@ yaml_load = function(x) yaml::yaml.load(
 # remove the three dashes in the YAML file before parsing it (the yaml package
 # cannot handle three dashes)
 yaml_load_file = function(f) {
-  x = paste(readUTF8(f), collapse = '\n')
+  x = paste(read_utf8(f), collapse = '\n')
   x = gsub('^\\s*---\\s*|\\s*---\\s*$', '', x)
   yaml::yaml.load(x)
 }
@@ -489,7 +492,7 @@ modify_yaml = function(
   file, ..., .order = character(), .keep_fields = NULL,
   .keep_empty = getOption('blogdown.yaml.empty', TRUE)
 ) {
-  x = readUTF8(file)
+  x = read_utf8(file)
   res = split_yaml_body(x)
   if (length(yml <- res$yaml) > 2) {
     meta0 = meta1 = res$yaml_list
@@ -512,14 +515,14 @@ modify_yaml = function(
       }
     }
     yml = as.yaml(meta1)
-    writeUTF8(c('---', yml, '---', res$body), file)
+    write_utf8(c('---', yml, '---', res$body), file)
   } else warning("Could not detect YAML metadata in the post '", file, "'")
 }
 
 # prepend YAML of one file to another file
-prepend_yaml = function(from, to, body = readUTF8(to)) {
+prepend_yaml = function(from, to, body = read_utf8(to)) {
   x = c(fetch_yaml2(from), '', body)
-  writeUTF8(x, to)
+  write_utf8(x, to)
 }
 
 # filter out empty elements in a list
@@ -582,7 +585,14 @@ clean_widget_html = function(x) {
 }
 
 decode_uri = function(...) httpuv::decodeURIComponent(...)
-encode_uri = function(...) httpuv::encodeURIComponent(...)
+encode_uri = function(...) {
+  # httpuv <= 1.3.5 is buggy: https://github.com/rstudio/httpuv/issues/86
+  if (packageVersion('httpuv') > '1.3.5') {
+    httpuv::encodeURIComponent(...)
+  } else {
+    URLencode(...)
+  }
+}
 
 # convert arguments to a single string of the form "arg1=value1 arg2=value2 ..."
 args_string = function(...) {
