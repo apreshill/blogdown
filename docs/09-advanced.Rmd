@@ -11,6 +11,7 @@ knitr::kable(matrix(c(
   'blogdown.hugo.dir', '', 'The directory of the Hugo executable',
   'blogdown.method', 'html', 'The building method for R Markdown',
   'blogdown.publishDir', '', 'The publish dir for local preview',
+  'blogdown.new_bundle', FALSE, 'Create a new post in a bundle?',
   'blogdown.widgetsID', TRUE, "Incremental IDs for HTML widgets?",
   NULL
 ), ncol = 3, byrow = TRUE, dimnames = list(NULL, c('Option name', 'Default', 'Meaning'))), booktabs = TRUE, caption = 'A few more advanced global options.')
@@ -22,21 +23,19 @@ The option `blogdown.method` is explained in Section \@ref(methods).
 
 When your website project is under version control in the RStudio IDE, continuously previewing the site can be slow, if it contains hundreds of files or more. The default publish directory is `public/` under the project root directory, and whenever you make a change in the source that triggers a rebuild, RStudio will be busy tracking file changes in the `public/` directory. The delay before you see the website in the RStudio Viewer can be 10 seconds or even longer. That is why we provide the option `blogdown.publishDir`. You may set a temporary publish directory to generate the website, and this directory should not be under the same RStudio project, e.g., `options(blogdown.publishDir = '../public_site')`, which means the website will be generated to the directory `public_site/` under the parent directory of the current project.
 
+To understand the option `blogdown.new_bundle`, you have to know the concept of [page bundles](https://gohugo.io/content-management/page-bundles/) in Hugo. When this option is set to `TRUE`, the function `blogdown::new_site()` (or the RStudio addin "New Post") will create a new post as the index file of a page bundle, e.g., `post/2015-07-23-bye-world/index.md` instead of `post/2015-07-23-bye-world.md`. One benefit of using a page bundle instead of a normal page file is that you can put resource files associated with the post (such as images) under the same directory of the post. This means you no longer have to put them under the `static/` directory, which is often confusing to Hugo beginners.
+
 The option `blogdown.widgetsID` is only relevant if your website source is under version control and you have HTML widgets on the website. If this option is `TRUE` (default), the random IDs of HTML widgets will be changed to incremental IDs in the HTML output, so these IDs are unlikely to change every time you recompile your website; otherwise, every time you will get different random IDs.
 
 ## LiveReload
 
 As we briefly mentioned\index{LiveReload} in Section \@ref(a-quick-example), you can use `blogdown::serve_site()` to preview a website, and the web page will be automatically rebuilt and reloaded in your web browser when the source file is modified and saved. This is called "LiveReload."
 
-We have provided two approaches to LiveReload. The default approach is through `servr::httw()`, which will continuously watch the website directory for file changes, and rebuild the site when changes are detected. This approach has a few drawbacks:
+We have provided two approaches to LiveReload. The default approach is through `servr::httw()`, which will continuously watch the website directory for file changes, and rebuild the site when changes are detected. This approach is relatively slow because the website is fully regenerated every time. This may not be a real problem for Hugo, because Hugo is often fast enough: it takes about a millisecond to generate one page, so a website with a thousand pages may only take about one second to be fully regenerated.
 
-1. It is relatively slow because the website is fully regenerated every time. This may not be a real problem for Hugo, because Hugo is often fast enough: it takes about a millisecond to generate one page, so a website with a thousand pages may only take about one second to be fully regenerated.
+If you are not concerned about the above issue, we recommend that you use the default approach, otherwise you can set the global option `options(blogdown.generator.server = TRUE)` to use an alternative approach to LiveReload, which is based on the native support for LiveReload from the static site generator. At the moment, this has only been tested against Hugo-based websites. It does not work with Jekyll and we were not successful with Hexo, either.
 
-1. The daemonized server (see Section \@ref(global-options)) may not work.
-
-If you are not concerned about the above issues, we recommend that you use the default approach, otherwise you can set the global option `options(blogdown.generator.server = TRUE)` to use an alternative approach to LiveReload, which is based on the native support for LiveReload from the static site generator. At the moment, this has only been tested against Hugo-based websites. It does not work with Jekyll and we were not successful with Hexo, either.
-
-This alternative approach requires two additional R packages to be installed: **processx** [@R-processx] and **later** [@R-later]. You may use this approach when you primarily work on plain Markdown posts instead of R Markdown posts, because it can be much faster to preview Markdown posts using the web server of Hugo. The web server can be stopped by `blogdown::stop_server()`, and it will always be stopped when the R session is ended, so you can restart your R session if `stop_server()` fails to stop the server for some reason.
+This alternative approach requires an additional R packages to be installed: **processx** [@R-processx]. You may use this approach when you primarily work on plain Markdown posts instead of R Markdown posts, because it can be much faster to preview Markdown posts using the web server of Hugo. The web server can be stopped by `blogdown::stop_server()`, and it will always be stopped when the R session is ended, so you can restart your R session if `stop_server()` fails to stop the server for some reason.
 
 The web server is established via the command `hugo server` (see [its documentation](https://gohugo.io/commands/hugo_server/) for details). You can pass command-line arguments via the global option `blogdown.hugo.server`. The default value for this option is `c('-D', '-F')`, which means to render draft and future posts in the preview. We want to highlight a special argument `--navigateToChanged` in a recent version of Hugo, which asks Hugo to automatically navigate to the changed page. For example, you can set the options:
 
@@ -56,7 +55,7 @@ The function\index{blogdown::build\_site()} `blogdown::build_site()` has an argu
 
 - Draft and future posts are always rendered when `local = TRUE`, but not when `local = FALSE`. This is for you to preview draft and future posts locally. If you know the [Hugo command line,](https://gohugo.io/commands/hugo/) it means the `hugo` command is called with the flags `-D -F`, or equivalently, `--buildDrafts --buildFuture`.
 
-- There is a caching mechanism to speed up building your website: an Rmd file will not be recompiled when its `*.html` output file is newer (in terms of file modification time). If you want to force `build_site(local = TRUE)` to recompile the Rmd file even if it is older than the HTML output, you need to delete the HTML output, or edit the Rmd file so that its modification time will be newer. This caching mechanism does not apply to `local = FALSE`, i.e., `build_site(local = FALSE)` will always recompile all Rmd files, because when you want to publish a site, you may need to recompile everything to make sure the site is fully regenerated. If you have time-consuming code chunks in any Rmd files, you have to use either of these methods to save time:
+- There is a caching mechanism to speed up building your website: an Rmd file will not be recompiled when its `*.html` output file is newer (in terms of file modification time). If you want to force `build_site(local = TRUE)` to recompile the Rmd file even if it is older than the HTML output, you need to delete the HTML output, or edit the Rmd file so that its modification time will be newer, or click the RStudio addin "Touch File". This caching mechanism does not apply to `local = FALSE`, i.e., `build_site(local = FALSE)` will always recompile all Rmd files, because when you want to publish a site, you may need to recompile everything to make sure the site is fully regenerated. If you have time-consuming code chunks in any Rmd files, you have to use either of these methods to save time:
 
     - Turn on **knitr**'s caching for time-consuming code chunks, i.e., the chunk option `cache = TRUE`.
 
@@ -70,7 +69,7 @@ You do not need to worry about these details if your website is automatically ge
 
 ## Functions in the blogdown package {#functions}
 
-There are about 20 exported functions\index{Functions} in the **blogdown** package, and many more non-exported functions. Exported functions are documented and you can use them after `library(blogdown)` (or via `blogdown::`). Non-exported functions are not documented, but you can access them via `blogdown:::` (the triple-colon syntax). This package is not very complicated, and consists of only about 1800 lines of R code (the number is given by the word-counting command `wc`):
+There are about 20 exported functions\index{Functions} in the **blogdown** package, and many more non-exported functions. Exported functions are documented and you can use them after `library(blogdown)` (or via `blogdown::`). Non-exported functions are not documented, but you can access them via `blogdown:::` (the triple-colon syntax). This package is not very complicated, and consists of only about 2000 lines of R code (the number is given by the word-counting command `wc`):
 
 ```{bash, comment=''}
 wc -l ../R/*.R ../inst/scripts/*.R
@@ -159,15 +158,15 @@ As we mentioned in Section \@ref(dep-path), R plots will be copied to `static/`,
 
 Although it is not relevant to **blogdown**, macOS users should remember to ignore `.DS_Store` and Windows users should ignore `Thumbs.db`.
 
-If you are relatively familiar with GIT\index{GIT Submodules}, there is a special technique that may be useful for you to manage Hugo themes, which is called "GIT submodules." A submodule in GIT allows you to manage a particular folder of the main repository using a different remote repository. For example, if you used the default `hugo-lithium-theme` from my GitHub repository, you might want to sync it with my repository occasionally, because I may update it from time to time. You can add the GIT submodule via the command line: 
+If you are relatively familiar with GIT\index{GIT Submodules}, there is a special technique that may be useful for you to manage Hugo themes, which is called "GIT submodules." A submodule in GIT allows you to manage a particular folder of the main repository using a different remote repository. For example, if you used the default `hugo-lithium` from my GitHub repository, you might want to sync it with my repository occasionally, because I may update it from time to time. You can add the GIT submodule via the command line: 
 
 ```bash
 git submodule add \
-  https://github.com/yihui/hugo-lithium-theme.git \
-  themes/hugo-lithium-theme
+  https://github.com/yihui/hugo-lithium.git \
+  themes/hugo-lithium
 ```
 
-If the folder `themes/hugo-lithium-theme` exists, you need to delete it before adding the submodule. Then you can see a SHA string associated with the "folder" `themes/hugo-lithium-theme` in the GIT status of your main repository indicating the version of the submodule. Note that you will only see the SHA string instead of the full content of the folder. Next time when you want to sync with my repository, you may run the command:
+If the folder `themes/hugo-lithium` exists, you need to delete it before adding the submodule. Then you can see a SHA string associated with the "folder" `themes/hugo-lithium` in the GIT status of your main repository indicating the version of the submodule. Note that you will only see the SHA string instead of the full content of the folder. Next time when you want to sync with my repository, you may run the command:
 
 ```bash
 git submodule update --recursive --remote

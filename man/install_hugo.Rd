@@ -5,13 +5,21 @@
 \alias{update_hugo}
 \title{Install Hugo}
 \usage{
-install_hugo(version = "latest", use_brew = Sys.which("brew") != "", force = FALSE)
+install_hugo(
+  version = "latest",
+  use_brew = Sys.which("brew") != "",
+  force = FALSE,
+  extended = TRUE
+)
 
 update_hugo()
 }
 \arguments{
 \item{version}{The Hugo version number, e.g., \code{0.26}; the special value
-\code{latest} means the latest version (fetched from Github releases).}
+\code{latest} means the latest version (fetched from Github releases).
+Alternatively, this argument can take a file path of the zip archive or
+tarball of the Hugo installer that has already been downloaded from Github,
+in which case it will not be downloaded again.}
 
 \item{use_brew}{Whether to use Homebrew (\url{https://brew.sh}) on macOS to
 install Hugo (recommended if you have already installed Homebrew). Note
@@ -21,6 +29,9 @@ Homebrew will be automatically installed if it has not been installed when
 \item{force}{Whether to install Hugo even if it has already been installed.
 This may be useful when upgrading Hugo (if you use Homebrew, run the
 command \command{brew update && brew upgrade} instead).}
+
+\item{extended}{Whether to use extended version of Hugo that has SCSS/SASS support.
+You only need the extended version if you want to edit SCSS/SASS.}
 }
 \description{
 Download the appropriate Hugo executable for your platform from Github and
@@ -40,4 +51,13 @@ This is just a helper function and may fail to choose the correct Hugo
 executable for your operating system, especially if you are not on Windows or
 Mac or a major Linux distribution. When in doubt, read the Hugo documentation
 and install it by yourself: \url{https://gohugo.io}.
+
+If you want to install Hugo to a custom path, you can set the global option
+\code{blogdown.hugo.dir} to a directory to store the Hugo executable before
+you call \code{install_hugo()}, e.g., \code{options(blogdown.hugo.dir =
+'~/Downloads/hugo_0.20.1/')}. This may be useful for you to use a specific
+version of Hugo for a specific website. You can set this option per project.
+See \href{https://bookdown.org/yihui/blogdown/global-options.html}{Section
+1.4 Global options} for details, or store a copy of Hugo on a USB Flash drive
+along with your website.
 }

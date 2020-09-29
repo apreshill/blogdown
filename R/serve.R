@@ -20,8 +20,6 @@
 #'   hence you cannot customize these arguments).
 #' @export
 serve_site = function(...) {
-  op = options(servr.daemon = getOption('servr.daemon', interactive()))
-  on.exit(options(op), add = TRUE)
   serve = switch(
     generator(), hugo = serve_it(),
     jekyll = serve_it(
@@ -39,49 +37,62 @@ serve_site = function(...) {
 
 server_ready = function(url) {
   !inherits(
-    knitr:::try_silent(suppressWarnings(readLines(url))), 'try-error'
+    xfun::try_silent(suppressWarnings(readLines(url))), 'try-error'
   )
 }
 
 generator = function() getOption('blogdown.generator', 'hugo')
 
-serve_it = function(
-  config = c('config.toml', 'config.yaml'), pdir = publish_dir(),
-  baseurl = site_base_dir()
-) {
+serve_it = function(config = config_files, pdir = publish_dir(), baseurl = site_base_dir()) {
   function(...) {
-    owd = setwd(site_root(config)); on.exit(setwd(owd), add = TRUE)
+    okay = FALSE  # whether the server is successfully started
+    root = site_root(config)
+    if (root %in% opts$get('served_dirs')) {
+      servr::browse_last()
+      return(message(
+        'The site has been served under the directory "', root, '". I have tried ',
+        'to reopen it for you with servr::browse_last(). If you do want to ',
+        'start a new server, you may stop existing servers with ',
+        'blogdown::stop_server(), or restart R. Normally you should not need to ',
+        'serve the same site multiple times in the same R session',
+        if (servr:::is_rstudio()) c(
+          ', otherwise you may run into issues like ',
+          'https://github.com/rstudio/blogdown/issues/404'
+        ), '.'
+      ))
+    }
+
+    on.exit(if (okay) opts$append(served_dirs = root), add = TRUE)
+    owd = setwd(root); on.exit(setwd(owd), add = TRUE)
 
     if (!getOption('blogdown.generator.server', FALSE)) {
-      if (is_windows() && getOption('servr.daemon', FALSE)) {
-        if (!knitr:::loadable('later')) stop(
-          "Please install the 'later' package: install.packages('later')", call. = FALSE
-        )
-      }
       build_site(TRUE)
       n = nchar(pdir)
-      return(servr::httw(site.dir = pdir, baseurl = baseurl, handler = function(...) {
+      s = servr::httw(site.dir = pdir, baseurl = baseurl, handler = function(...) {
         files = c(...)
         # exclude changes in the publish dir
         files = files[substr(files, 1, n) != pdir]
         # re-generate only if Rmd/md or config files or layouts were updated
-        if (length(grep('(_?layouts?|static)/|[.](toml|yaml)$', files)) ||
+        if (length(grep('(_?layouts?|static|data)/|[.](toml|yaml)$', files)) ||
             length(grep(md_pattern, files)))
           build_site(TRUE)
-      }, dir = '.', ...))
+      }, dir = '.', ...)
+      okay = TRUE
+      return(invisible(s))
     }
 
-    if (!knitr:::loadable('processx') || !knitr:::loadable('later')) stop(
-      "Please install the packages 'processx' and 'later'", call. = FALSE
-    )
     server = servr::server_config(...)
 
     # launch the hugo/jekyll/hexo server
     g = generator()
     cmd = if (g == 'hugo') find_hugo() else g
     host = server$host; port = server$port; intv = server$interval
+    if (!servr:::port_available(port, host)) stop(
+      'The port ', port, ' at ', host, ' is unavailable', call. = FALSE
+    )
     args_fun = match.fun(paste0(g, '_server_args'))
     cmd_args = args_fun(host, port)
+    tweak_hugo_env()
     p1 = proc_new(cmd, cmd_args)
     pid = p1$get_pid()
     opts$set(pids = c(opts$get('pids'), pid))
@@ -89,22 +100,30 @@ serve_it = function(
       if (proc_print(p1, c(FALSE, TRUE))) later::later(p1_print, intv)
     }
 
-    message('Waiting for the server to be initialized...')
+    message(
+      'Launching the server via the command:\n  ',
+      paste(c(cmd, cmd_args), collapse = ' ')
+    )
     i = 0
     repeat {
       Sys.sleep(1)
       if (server_ready(server$url)) break
       if (i >= getOption('blogdown.server.timeout', 30)) {
+        proc_print(p1)
+        cat('\n')
         p1$kill()
         stop(
           'It took more than ', i, ' seconds to launch the server. ',
           'There may be something wrong. The process has been killed.',
+          'If the site needs more time to be built and launched, set ',
+          'options(blogdown.server.timeout) to a larger value.',
           call. = FALSE
         )
       }
       i = i + 1
     }
     server$browse()
+    okay = TRUE
     message(
       'Launched the ', g, ' server in the background (process ID: ', pid, '). ',
       'To stop it, call blogdown::stop_server() or restart the R session.'
@@ -167,6 +186,7 @@ stop_server = function() {
   if (getOption('blogdown.generator.server', FALSE)) {
     for (i in opts$get('pids')) proc_kill(i)
   } else servr::daemon_stop()
+  opts$set(served_dirs = NULL)
 }
 
 get_config2 = function(key, default) {

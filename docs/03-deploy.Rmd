@@ -4,8 +4,6 @@ Since the website is basically a folder containing static files, it is much easi
 
 Considering the cost and friendliness to beginners, we currently recommend Netlify (https://www.netlify.com). It provides a free plan that actually has quite a lot of useful features. If you have no experience in publishing websites before, just log in using your GitHub account or other accounts, drag the `public/` folder built by **blogdown** for your website to the Netlify page, and your website will be online in a few seconds with a random subdomain name of the form `random-word-12345.netlify.com` provided by Netlify (you can customize the name). You can easily automate this process (see Section \@ref(netlify) for more details). You do not need to wrestle with `ssh` or `rsync -zrvce` anymore, if you know what these commands mean.
 
-The second easiest solution may be Updog (https://updog.co), which features Dropbox integration. Publishing a website can be as easy as copying the files under the `public/` folder of your **blogdown** website to a Dropbox folder. The free plan of Updog only provides limited features, and its paid plan will give you access to much richer features.
-
 If you do not mind using command-line tools or are familiar with GIT/GitHub, you can certainly consider services like GitHub Pages, Travis CI, or Amazon S3 to build or host your websites. No matter which service you use, please keep in mind that none of them can really lock you in and you are always free to change the service. As we have mentioned before, one great advantage of **blogdown** is that your website will be a folder of static files that you can move to any web server.
 
 ## Netlify
@@ -14,7 +12,7 @@ As we just mentioned, Netlify\index{Netlify} allows you to quickly publish a web
 
 Basically, you have to host all source files of your website in a GIT repository.^[If the contents of your `blogdown` site are not in the root directory of your GIT repository, Netlify will not build.] You do not need to put the `public/` directory under version control^[You can add `public` to `.gitignore` to ignore it in GIT.] because it will be automatically generated. Currently, Netlify supports GIT repositories hosted on GitHub, GitLab, and BitBucket. With any of these accounts, you can log into Netlify from its homepage and follow the guide to create a new site from your GIT repository.
 
-Netlify supports several static website generators, including Jekyll and Hugo. For a new site, you have to specify a command to build your website, as well as the path of the publish directory. Netlify also supports multiple versions of Hugo, so the build command can be the default `hugo`. The default version is 0.17, which is too old, and we recommend that you use at least version 0.20. To specify a Hugo version greater or equal to 0.20, you need to create an environment variable `HUGO_VERSION` on Netlify. See the [Netlify documentation](https://www.netlify.com/docs/continuous-deployment/) for more information. The publish directory should be `public` unless you have changed it in your `config.toml`. Figure \@ref(fig:netlify-settings) shows the settings of the website https://t.yihui.name. You do not have to follow the exact settings for your own website; in particular, you may need to change the value of the environment variable `HUGO_VERSION` to a recent version of Hugo.^[By the time when this book is published, the version 0.24.1 may be too old.]
+Netlify supports several static website generators, including Jekyll and Hugo. For a new site, you have to specify a command to build your website, as well as the path of the publish directory. Netlify also supports multiple versions of Hugo, so the build command can be the default `hugo`. The default version is 0.17, which is too old, and we recommend that you use at least version 0.20. To specify a Hugo version greater or equal to 0.20, you need to create an environment variable `HUGO_VERSION` on Netlify. See the [Netlify documentation](https://www.netlify.com/docs/continuous-deployment/) for more information. The publish directory should be `public` unless you have changed it in your `config.toml`. Figure \@ref(fig:netlify-settings) shows the settings of the website https://t.yihui.org. You do not have to follow the exact settings for your own website; in particular, you may need to change the value of the environment variable `HUGO_VERSION` to a recent version of Hugo.^[By the time when this book is published, the version 0.24.1 may be too old.]
 
 ```{r netlify-settings, fig.cap='Example settings of a website deployed on Netlify.', echo=FALSE, fig.align='center', out.width='100%'}
 knitr::include_graphics('images/netlify-settings.png')
@@ -24,23 +22,13 @@ It may take a minute or two to deploy your website on Netlify for the first time
 
 After your GIT repository is connected with Netlify, the last issue you may want to solve is the domain name\index{Domain Name}, unless you are satisfied with the free Netlify subdomain. If you want to use a different domain, you need to configure some DNS records of the domain to point it to the Netlify server. See Appendix \@ref(domain-name) for some background knowledge on domain names.
 
-If you are not familiar with domain names or do not want to learn more about them, something to consider is a free subdomain `*.rbind.io` offered by RStudio, Inc. Please visit the Rbind support website <https://support.rbind.io> to learn how to apply for a subdomain. In fact, the Rbind organization also offers free help on how to set up a website based on **blogdown**, thanks to a lot of volunteers from the R and statistics community.
+If you are not familiar with domain names or do not want to learn more about them, something to consider is a free subdomain `*.rbind.io` offered by RStudio, PBC. Please visit the Rbind support website <https://support.rbind.io> to learn how to apply for a subdomain. In fact, the Rbind organization also offers free help on how to set up a website based on **blogdown**, thanks to a lot of volunteers from the R and statistics community.
 
 Netlify is the only solution in this chapter that does not require you to prebuild your website. You only need to update the source files, push them to GitHub, and Netlify will build the website for you.^[This is called "continuous deployment."] The rest of the solutions in this chapter will require you to build your website locally and upload the `public/` folder explicitly or implicitly. That said, you can certainly prebuild your website using any tools, push it to GitHub, and Netlify is still able to deploy it for you. What you need to do is leave the build command empty, and tell Netlify your publish directory (e.g., Hugo's default `public/`, but if your prebuilt website is under the root directory, specify `.` as the publish directory instead). Then Netlify simply uploads all files under this directory to its servers without rebuilding your website.
-
-## Updog
-
-Updog (https://updog.co) provides\index{Updog} a simple service: it turns a specified Dropbox (or Google Drive) folder into a website. The idea is that you grant Updog the permission to read the folder, and it will act as a middleman to serve your files under this folder to your visitors. This folder has to be accessed via a domain name, and Updog offers a free subdomain `*.updog.co`. For example, if you have assigned the domain `example.updog.co` to your Dropbox folder, and a visitor wants to see the page `https://example.updog.co/foo/index.html`, Updog will read the file `foo/index.html` in your Dropbox folder and display it to the visitor.
-
-At the moment, Updog's free plan only allows one website per account and will insert a footer "Hosted on Updog" on your web pages. You may not like these limitations. The major benefit of using Updog is that publishing a website becomes implicit since Dropbox will continuously sync files. All you need to do is to make sure your website is generated to the correct Dropbox folder. This can be easily achieved by setting the option `publishDir` in `config.toml`. For example, suppose the folder that you assign to Updog is `~/Dropbox/Apps/updog/my-website/`, and your source folder is at `~/Dropbox/Apps/updog/my-source/`, then you can set `publishDir: "../my-website"` in `~/Dropbox/Apps/updog/my-source/config.toml`.
-
-You can also use your custom domain name if you do not want the default Updog subdomain, and you only need to point the CNAME record of your domain name to the Updog subdomain.^[See Appendix \@ref(domain-name) for more information.]
 
 ## GitHub Pages
 
 GitHub Pages (https://pages.github.com) \index{GitHub Pages} is a very popular way to host static websites (especially those built with Jekyll), but its advantages are not obvious or appealing compared to Netlify. We recommend that you consider Netlify + Hugo due to these reasons:
-
-- Currently, GitHub Pages does not support HTTPS for custom domain names. HTTPS only works for `*.github.io` subdomains. This limitation does not exist on Netlify. You may read the article ["Why HTTPS for Everything?"](https://https.cio.gov/everything/) to understand why it is important, and you are encouraged to turn on HTTPS for your website whenever you can.
 
 - Redirecting URLs is awkward with GitHub Pages but much more straightforward with Netlify.^[GitHub Pages uses a Jekyll plugin to write an `HTTP-REFRESH` meta tag to redirect pages, and Netlify can do pattern-based 301 or 302 redirects, which can notify search engines that certain pages have been moved (permanently or temporarily).] This is important especially when you have an old website that you want to migrate to Hugo; some links may be broken, in which case you can easily redirect them with Netlify.
 
@@ -101,7 +89,7 @@ username.github.io/
 └── ...
 ```
 
-The source directory and the `username.github.io` directory are under the same parent directory. In this case, you need to set the option `publishDir: "../username.github.io"` in `source/config.toml`.
+The source directory and the `username.github.io` directory are under the same parent directory. In this case, you need to set the option `publishDir = "../username.github.io"` in `source/config.toml`.
 
 ## Travis + GitHub
 
@@ -117,34 +105,16 @@ The second problem can be solved, but I do not want to explain how in this book 
 
 The Travis documentation shows how to deploy a site to GitHub Pages: https://docs.travis-ci.com/user/deployment/pages/, but does not show how to build a site. Here is the Travis configuration file, `.travis.yml`, for the `travis-blogdown` repository:
 
+```{r, include=FALSE}
+xfun::in_dir('../..', {
+  if (!dir.exists('travis-blogdown'))
+    system('git clone https://github.com/yihui/travis-blogdown')
+  system('cd travis-blogdown; git pull origin master')
+})
+```
+
 ```yaml
-language: r
-dist: trusty
-sudo: false
-
-branches:
-  only:
-    - master
-
-cache:
-  packages: yes
-  directories:
-    - $HOME/bin
-
-before_script:
-  - "Rscript -e 'blogdown::install_hugo()'"
-
-script:
-  - "Rscript -e 'blogdown::build_site()'"
-
-deploy:
-  provider: pages
-  skip_cleanup: true
-  github_token: $GITHUB_TOKEN
-  on:
-    branch: master
-  local_dir: public
-  fqdn: travis-blogdown.yihui.name
+`r xfun::file_string('../../travis-blogdown/.travis.yml')`
 ```
 
 The key is that we install Hugo via `blogdown::install_hugo()` and build the site via `blogdown::build_site()`. To trick Travis into building this repository like an R package, you must have a `DESCRIPTION` file in the repository, otherwise your website will not be built.
@@ -164,7 +134,7 @@ There are a few more things to explain and emphasize in `.travis.yml`:
 
 - The `cache` option specifies all R packages to be cached, so the next time it will be faster to build the site (R packages do not need to be reinstalled from source). The `bin/` directory in the home directory is also cached because Hugo is installed there, and the next time Hugo does not need to be reinstalled.
 
-- For the `deploy` option, there is an environment variable named `GITHUB_TOKEN`, and I have specified its value to be a GitHub personal access token via the Travis settings of this repository, so that Travis will be able to write to my repository after the website is built. The option `on` specifies that the deployment will only occur when the `master` branch is built. The `local_dir` option is the publish directory, which should default to `public` in Hugo. By default, the website is pushed to the `gh-pages` branch of this repository. The `fqdn` option specifies the custom domain of the website. I have set a CNAME record (see Appendix \@ref(domain-name)) to point `travis-blogdown.yihui.name` to `yihui.github.io`, so that GitHub is able to serve this website through this domain (in fact, Travis will write a `CNAME` file containing the domain to the `gh-pages` branch).
+- For the `deploy` option, there is an environment variable named `GITHUB_TOKEN`, and I have specified its value to be a GitHub personal access token via the Travis settings of this repository, so that Travis will be able to write to my repository after the website is built. The option `on` specifies that the deployment will only occur when the `master` branch is built. The `local_dir` option is the publish directory, which should default to `public` in Hugo. By default, the website is pushed to the `gh-pages` branch of this repository. The `fqdn` option specifies the custom domain of the website. I have set a CNAME record (see Appendix \@ref(domain-name)) to point `travis-blogdown.yihui.org` to `yihui.github.io`, so that GitHub is able to serve this website through this domain (in fact, Travis will write a `CNAME` file containing the domain to the `gh-pages` branch).
 
 If you use the `username.github.io` repository on GitHub, the website must be pushed to its `master` branch instead of `gh-pages` (this is the only exception). I recommend that you separate the source repository and the output repository. For example, you may have a `website-source` repository with the same settings as the above `.travis.yml` except for two new options under `deploy`:
 

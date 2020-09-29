@@ -46,7 +46,7 @@ Then wait for this function to create a new site, download the default theme, ad
 
 Now you should see a bunch of directories and files under the RStudio project or your current working directory. Before we explain these new directories and files, let's introduce an important and helpful technology first: _LiveReload._\index{LiveReload} This means your website^[Until you set up your website to be deployed, LiveReload only updates the *local* version of your website. This version is only visible to you. In order to make your website searchable, discoverable, and live on the internet you will need to upload your website's files to a site builder. See Chapter \@ref(deployment) for details.] will be automatically rebuilt and reloaded in your web browser^[You can also think of the RStudio Viewer as a web browser.] when you modify any source file of your website and save it. Basically, once you launch the website in a web browser, you do not need to rebuild it explicitly anymore. All you need to do is edit the source files, such as R Markdown documents, and save them. There is no need to click any buttons or run any commands. LiveReload is implemented via `blogdown::serve_site()`\index{blogdown::serve\_site()}, which is based on the R package **servr** [@R-servr] by default.^[Hugo has its own LiveReload implementation. If you want to take advantage of it, you may set the global option `options(blogdown.generator.server = TRUE)`. See Section \@ref(livereload) for more information.]
 
-The `new_site()` function has several arguments, and you may check out its R help page (`?blogdown::new_site`) for details. A minimal default theme named "hugo-lithium-theme" is provided as the default theme of the new site,^[You can find its source on GitHub: https://github.com/yihui/hugo-lithium-theme. This theme was forked from https://github.com/jrutheiser/hugo-lithium-theme and modified to work better with **blogdown**.] and you can see what it looks like in Figure \@ref(fig:lithium).
+The `new_site()` function has several arguments, and you may check out its R help page (`?blogdown::new_site`) for details. A minimal default theme named "hugo-lithium" is provided as the default theme of the new site,^[You can find its source on GitHub: https://github.com/yihui/hugo-lithium. This theme was forked from https://github.com/jrutheiser/hugo-lithium-theme and modified to work better with **blogdown**.] and you can see what it looks like in Figure \@ref(fig:lithium).
 
 ```{r lithium, fig.cap='The homepage of the default new site.', echo=FALSE, fig.align='center', out.width='90%'}
 knitr::include_graphics('images/lithium-theme.png')
@@ -60,7 +60,7 @@ You have to know three most basic concepts for a Hugo-based website:
     baseurl = "/"
     languageCode = "en-us"
     title = "A Hugo website"
-    theme = "hugo-lithium-theme"
+    theme = "hugo-lithium"
 
     [[menu.main]]
         name = "About"
@@ -85,7 +85,7 @@ If you are satisfied with this default theme, you are basically ready to start w
 
 There are a few essential RStudio addins\index{RStudio addins} to make it easy to edit and preview your website, and you can find them in the menu "Addins" on the RStudio toolbar:
 
-- "Serve Site": This addin calls `blogdown::serve_site()` to continuously serve your website locally using the LiveReload technology, so you can live preview the website. You can continue to edit material for your site while you are previewing it, but this function will block your R console by default, meaning that you will not be able to use your R console once you start this local web server. To unblock your console, click on the red stop sign in the top right corner of the console window. If you would rather avoid this behavior altogether, set the option `options(servr.daemon = TRUE)` before you click this addin or call the function `serve_site()`, so that the server is daemonized and will not block your R console.^[We have heard of cases where the daemonized server crashed R on Windows. If you run into problems with the daemonized server, there are three workarounds, and you can try one of them: (1) install the **later** package via `install.packages("later")` and start the server again; (2) use Hugo's server (see Section \@ref(livereload)); (3) call `blogdown::serve_site()` in a separate R session, and you can preview your website in your web browser but can still edit the website in RStudio.]
+- "Serve Site": This addin calls `blogdown::serve_site()` to continuously serve your website locally using the LiveReload technology, so you can live preview the website. You can continue to edit material for your site while you are previewing it.
 
 - "New Post": This addin provides a dialog box for you to enter the metadata of your blog post, including the title, author, date, and so on. See Figure \@ref(fig:new-post) for an example. This addin actually calls the function `blogdown::new_post()` under the hood, but does a few things automatically:
 
@@ -99,12 +99,22 @@ There are a few essential RStudio addins\index{RStudio addins} to make it easy t
 
 - "Update Metadata": This addin allows you to update the YAML metadata of the currently opened post. See Figure \@ref(fig:update-meta) for an example. The main advantage of this addin is that you can select categories and tags from dropdown menus instead of having to remember them.
 
+- "Insert Image": This addin allows you to insert any image in your computer to your currently opened post.^[Check <https://lcolladotor.github.io/2018/03/07/blogdown-insert-image-addin> for a more in-depth explanation and for how to insert an image without using this addin.] Figure \@ref(fig:insert-image) shows how the addin looks like. This addin copies the image to the final location for your post files, and adds the Markdown/HTML code to embed the image. You can specify the width and height of the image, as well as the alternative text. The addin will show the final image file path after the image is uploaded. You can edit the path if necessary. If the image already exists, the addin will ask you whether you want to overwrite it as in Figure \@ref(fig:overwrite-image): when in doubt, change the name in the "Target file path" text input to avoid a conflict with previous images you have inserted.
+
 ```{r new-post, fig.cap='Create a new post using the RStudio addin.', fig.align='center', out.width='80%', echo=FALSE}
 knitr::include_graphics('images/new-post.png')
 ```
 
 ```{r update-meta, fig.cap='Update the metadata of an existing post using the RStudio addin.', fig.align='center', out.width='70%', echo=FALSE}
 knitr::include_graphics('images/update-meta.png')
+```
+
+```{r insert-image, fig.cap='Insert an image to an existing post using the RStudio addin.', fig.align='center', out.width='70%', echo=FALSE}
+knitr::include_graphics('images/insert-image.png')
+```
+
+```{r overwrite-image, fig.cap='Overwrite the image you are inserting in your blog post.', fig.align='center', out.width='70%', echo=FALSE}
+knitr::include_graphics('images/overwrite-image.png')
 ```
 
 With these addins, you should rarely need to run any R commands manually after you have set up your website, since all your posts will be automatically compiled whenever you create a new post or modify an existing post due to the LiveReload feature.
@@ -135,7 +145,7 @@ Depending on your personal preferences, you can set a few global options before 
 
 ```{r global-options, echo=FALSE}
 knitr::kable(matrix(c(
-  'servr.daemon', 'FALSE', 'Whether to use a daemonized server',
+  'servr.daemon', 'interactive()', 'Use a daemonized server?',
   'blogdown.author', '', 'The default author of new posts',
   'blogdown.ext', '.md', 'Default extension of new posts',
   'blogdown.subdir', 'post', 'A subdirectory under content/',
@@ -151,10 +161,10 @@ file.edit('~/.Rprofile')
 # or file.edit('.Rprofile')
 ```
 
-Suppose you always prefer the daemonized server and want the author of new posts to be "John Doe" by default. You can set these options in the profile file:
+Suppose you always prefer writing Rmd posts (instead of the default `*.md`), and want the author of new posts to be "John Doe" by default. You can set these options in the profile file:
 
 ```{r eval=FALSE}
-options(servr.daemon = TRUE, blogdown.author = 'John Doe')
+options(blogdown.ext = '.Rmd', blogdown.author = 'John Doe')
 ```
 
 A nice consequence of setting these options is that when you use the RStudio addin "New Post," the fields "Author," "Subdirectory," and "Format" will be automatically populated, so you do not need to manipulate them every time unless you want to change the defaults (occasionally).
@@ -169,15 +179,28 @@ if (file.exists('~/.Rprofile')) {
 # then set options(blogdown.author = 'Your Name') in ~/.Rprofile
 ```
 
+Note that [R will silently ignore the last line of your `.Rprofile`](https://yihui.org/en/2018/04/rprofile-trailing-newline/) if it does not have a trailing newline, so please make sure you add at least one newline to the end of your `.Rprofile`.
+
 ## R Markdown vs. Markdown {#output-format}
 
-If you are not familiar with R Markdown\index{R Markdown}, please see Appendix \@ref(r-markdown) for a quick tutorial. When you create a new post, you have to decide whether you want to use R Markdown or plain Markdown\index{Markdown}, as you can see from Figure \@ref(fig:new-post). The main differences are:
+If you are not familiar with R Markdown\index{R Markdown}, please see Appendix \@ref(r-markdown) for a quick tutorial. When you create a new post, you have to decide whether you want to use R Markdown or plain Markdown\index{Markdown}, as you can see from Figure \@ref(fig:new-post). 
+
+Table \@ref(tab:md-diff) summarizes the main differences between the three options, followed by detailed explanations below.
+
+Table: (\#tab:md-diff) Differences among the three document formats.
+
+|Feature      |.Rmd |.Rmarkdown |.md  |
+|:------------|:----|:----------|:----|
+|Run R code   |yes  |yes        |no   |
+|Bibliography |yes  |no         |no   |
+|Task list    |maybe|yes        |yes  |
+|MathJax      |yes  |maybe      |maybe|
+|HTML widgets |yes  |no         |no   |
 
 1. You cannot execute any R code in a plain Markdown document, whereas in an R Markdown document, you can embed R code chunks (```` ```{r} ````). However, you can still embed R code in plain Markdown using the syntax for fenced code blocks ```` ```r ```` (note there are no curly braces `{}`). Such code blocks will not be executed and may be suitable for pure demonstration purposes. Below is an example of an R code chunk in R Markdown:
 
-
     ````markdown
-    `r ''````{r cool-plot, fig.width='80%', fig.cap='A cool plot.'}
+    `r ''````{r cool-plot, fig.cap='A cool plot.'}
     plot(cars, pch = 20)  # not really cool
     ```
     ````
@@ -189,7 +212,6 @@ If you are not familiar with R Markdown\index{R Markdown}, please see Appendix \
     1 + 1  # not executed
     ```
     ````
-
 
 2. A plain Markdown post is rendered to HTML through [Blackfriday](https://gohugo.io/overview/configuration/) \index{Blackfriday}(a package written in the Go language and adopted by Hugo). An R Markdown document is compiled through the packages **rmarkdown**, **bookdown**, and Pandoc\index{Pandoc}, which means you can use most features of [Pandoc's Markdown](http://pandoc.org/MANUAL.html#pandocs-markdown) and [**bookdown**'s Markdown extensions](https://bookdown.org/yihui/bookdown/components.html) in **blogdown**. If you use R Markdown [@R-rmarkdown] with **blogdown**, we recommend that you read the documentation of Pandoc and **bookdown** at least once to know all the possible features. We will not repeat the details in this book, but list the features briefly below, which are also demonstrated on the example website https://blogdown-demo.rbind.io.
 
@@ -209,7 +231,7 @@ If you are not familiar with R Markdown\index{R Markdown}, please see Appendix \
     
     - HTML widgets, and Shiny apps embedded via `<iframe>`.
 
-There are many differences in syntax between Blackfriday's Markdown and Pandoc's Markdown. For example, you can write a task list with Blackfriday but not with Pandoc:
+There are many differences in syntax between Blackfriday's Markdown and Pandoc's Markdown. For example, you can write a task list with Blackfriday but you could not with Pandoc until recently:^[Support for task lists was added to Pandoc with [version 2.6, released on January 2019](https://github.com/jgm/pandoc/releases/tag/2.6).]
 
 ```markdown
 - [x] Write an R package.
@@ -218,14 +240,13 @@ There are many differences in syntax between Blackfriday's Markdown and Pandoc's
 - [ ] Profit!
 ```
 
-
-Similarly, Blackfriday does not support LaTeX math and Pandoc does. We have added the [MathJax](https://www.mathjax.org/#docs) \index{MathJax} support to the default theme ([hugo-lithium-theme](https://github.com/yihui/hugo-lithium-theme)) in **blogdown** to render LaTeX math on HTML pages, but there is a caveat for plain Markdown posts: you have to include inline math expressions in a pair of backticks `` `$math$` ``, e.g., `` `$S_n = \sum_{i=1}^n X_i$` ``. Similarly, math expressions of the display style have to be written in `` `$$math$$` ``. For R Markdown posts, you can use `$math$` for inline math expressions, and `$$math$$` for display-style expressions.^[The reason that we need the backticks for plain Markdown documents is that we have to prevent the LaTeX code from being interpreted as Markdown by Blackfriday. Backticks will make sure the inner content is not translated as Markdown to HTML, e.g., `` `$$x *y* z$$` `` will be converted to `<code>$$x *y* z$$</code>`. Without the backticks, it will be converted to `$$x <em>y</em> z$$`, which is not a valid LaTeX math expression for MathJax. Similar issues can arise when you have other special characters like underscores in your math expressions.]
+Similarly, Blackfriday does not support LaTeX math and Pandoc does. We have added the [MathJax](https://www.mathjax.org/#docs) \index{MathJax} support to the default theme ([hugo-lithium](https://github.com/yihui/hugo-lithium)) in **blogdown** to render LaTeX math on HTML pages, but there is a caveat for plain Markdown posts: you have to include inline math expressions in a pair of backticks `` `$math$` ``, e.g., `` `$S_n = \sum_{i=1}^n X_i$` ``. Similarly, math expressions of the display style have to be written in `` `$$math$$` ``. For R Markdown posts, you can use `$math$` for inline math expressions, and `$$math$$` for display-style expressions.^[The reason that we need the backticks for plain Markdown documents is that we have to prevent the LaTeX code from being interpreted as Markdown by Blackfriday. Backticks will make sure the inner content is not translated as Markdown to HTML, e.g., `` `$$x *y* z$$` `` will be converted to `<code>$$x *y* z$$</code>`. Without the backticks, it will be converted to `$$x <em>y</em> z$$`, which is not a valid LaTeX math expression for MathJax. Similar issues can arise when you have other special characters like underscores in your math expressions.]
 
 If you find it is a pain to have to remember the differences between R Markdown and Markdown, a conservative choice is to always use R Markdown, even if your document does not contain any R code chunks. Pandoc's Markdown is much richer than Blackfriday, and there are only a small number of features unavailable in Pandoc but present in Blackfriday. The main disadvantages of using R Markdown are:
 
 1. You may sacrifice some speed in rendering the website, but this may not be noticeable due to a caching mechanism in **blogdown** (more on this in Section \@ref(local-preview)). Hugo is very fast when processing plain Markdown files, and typically it should take less than one second to render a few hundred Markdown files.
 
-1. You will have some intermediate HTML files in the source directory of your website, because **blogdown** has to call **rmarkdown** to pre-render `*.Rmd` files `*.html`. You will also have intermediate folders for figures (`*_files/`) and cache (`*_cache/`) if you have plot output in R code chunks or have enabled **knitr**'s caching. Unless you care a lot about the "cleanness" of the source repository of your website (especially when you use a version control tool like GIT), these intermediate files should not matter.
+1. You will have some intermediate HTML files in the source directory of your website, because **blogdown** has to call **rmarkdown** to pre-render `*.Rmd` files into `*.html`. You will also have intermediate folders for figures (`*_files/`) and cache (`*_cache/`) if you have plot output in R code chunks or have enabled **knitr**'s caching. Unless you care a lot about the "cleanness" of the source repository of your website (especially when you use a version control tool like GIT), these intermediate files should not matter.
 
 In this book, we usually mean `.Rmd` files when we say "R Markdown documents," which are compiled to `.html` by default. However, there is another type of R Markdown document with the filename extension `.Rmarkdown`. Such R Markdown documents are compiled to Markdown documents with the extension `.markdown`, which will be processed by Hugo instead of Pandoc. There are two major limitations of using `.Rmarkdown` compared to `.Rmd`:
 
@@ -294,7 +315,7 @@ Another thing to keep in mind is that the more effort you make in a complicated 
 
 > If you choose to dig a rather deep hole, someday you will have no choice but keep on digging, even with tears.
 >
-> --- Liyun Chen^[Translated from her Chinese Weibo: http://weibo.com/1406511850/Dhrb4toHc (you cannot view this page unless you have logged in).]
+> --- Liyun Chen^[Translated from her Chinese Weibo.]
 
 ## A recommended workflow {#workflow}
 
@@ -310,9 +331,7 @@ To start a new website:
 
 To edit a website:
 
-1. Set `options(servr.daemon = TRUE)` unless you have already set it in `.Rprofile`. If this option does not work for you (e.g., it crashes your R session), see Section \@ref(global-options) for a workaround.
-
-1. Click the RStudio addin "Serve Site" to preview the site in RStudio Viewer. This only needs to be done once every time you open the RStudio project or restart your R session. Do not click the Knit button on the RStudio toolbar.
+1. Click the RStudio addin "Serve Site" to preview the site in RStudio Viewer. This only needs to be done once every time you open the RStudio project or restart your R session. Do not click the `Knit` button on the RStudio toolbar.
 
 1. Use the "New Post" addin to create a new post or page, then start writing the content.
 

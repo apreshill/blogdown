@@ -17,7 +17,8 @@
 #'   to \code{bookdown::html_document2()} (note the option \code{theme} is not
 #'   supported and set to \code{NULL} internally, and when \code{template =
 #'   NULL}, a default template in \pkg{blogdown} will be used).
-#' @param post_processor Passed to \code{rmarkdown::\link{output_format}}.
+#' @param pre_knit,post_processor Passed to
+#'   \code{rmarkdown::\link{output_format}}.
 #'
 #' @note Do not use a custom template unless you understand how the default
 #'   template actually works (see the \pkg{blogdown} book).
@@ -31,7 +32,7 @@
 #' @export
 html_page = function(
   ..., number_sections = FALSE, self_contained = FALSE, highlight = NULL,
-  template = NULL, post_processor = NULL
+  template = NULL, pre_knit = NULL, post_processor = NULL
 ) {
   if (identical(template, 'default')) stop(
     'blogdown::html_page() does not support template = "default"'
@@ -39,12 +40,15 @@ html_page = function(
   if (identical(highlight, 'textmate')) stop(
     'blogdown::html_page() does not support highlight = "textmate"'
   )
+  if (is.character(pre_knit))
+    pre_knit <- eval(parse(text = pre_knit))
   if (is.character(post_processor))
     post_processor <- eval(parse(text = post_processor))
   rmarkdown::output_format(
     knitr = NULL,
     pandoc = NULL,
     clean_supporting = self_contained,
+    pre_knit = pre_knit,
     post_processor = post_processor,
     base_format = bookdown::html_document2(
       ..., number_sections = number_sections, theme = NULL,

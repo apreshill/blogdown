@@ -1,26 +1,30 @@
 language: r
-dist: trusty
-sudo: false
+dist: xenial
+addons:
+  snaps:
+    - hugo
 cache:
   packages: yes
-  directories:
-    - $HOME/bin
-    - $TRAVIS_BUILD_DIR/docs
 
 env:
   global:
-    - R_PKG="$(basename $TRAVIS_REPO_SLUG)" R_KNITR_OPTIONS="knitr.chunk.tidy=TRUE" PATH=$HOME/bin:$PATH
+    - R_PKG="$(basename $TRAVIS_REPO_SLUG)" PATH=$HOME/bin:$PATH
 
 repos:
-  XRAN: https://xran.yihui.name
-
-before_install:
-  - "curl https://xran.yihui.name/.gitconfig -o ~/.gitconfig"
-  - Rscript -e "update.packages(.libPaths()[1], ask = FALSE)"
+  XRAN: https://xran.yihui.org
 
 before_script:
-  - R CMD INSTALL .
-  - "[ -x \"$HOME/bin/hugo\" ] || Rscript -e \"blogdown::install_hugo()\""
+  - "curl -L https://xran.yihui.org/.gitconfig -o ~/.gitconfig"
+  - Rscript -e "update.packages(.libPaths()[1], ask = FALSE)"
+  - hugo version
 
-after_success:
-  - "(curl https://xran.yihui.name/r-xran | bash)"
+jobs:
+  include:
+    - r: oldrel
+    - r: release
+      before_cache:
+        - Rscript -e 'xfun::pkg_load2("covr")'
+      after_success:
+        - Rscript -e 'covr::codecov()'
+        - "(curl -L https://xran.yihui.org/r-xran | bash)"
+    - r: devel

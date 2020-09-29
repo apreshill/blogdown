@@ -1,18 +1,19 @@
 # blogdown
 
 [![Build Status](https://travis-ci.org/rstudio/blogdown.svg)](https://travis-ci.org/rstudio/blogdown)
-[![Downloads from the RStudio CRAN mirror](https://cranlogs.r-pkg.org/badges/grand-total/blogdown)](https://cran.rstudio.org/package=blogdown)
+[![Coverage status](https://codecov.io/gh/rstudio/blogdown/branch/master/graph/badge.svg)](https://codecov.io/github/rstudio/blogdown?branch=master)
+[![Downloads from the RStudio CRAN mirror](https://cranlogs.r-pkg.org/badges/blogdown)](https://cran.r-project.org/package=blogdown)
 
 <a href="https://bookdown.org/yihui/blogdown"><img src="https://bookdown.org/yihui/blogdown/images/logo.png" alt="blogdown logo" align="right" /></a>
 
-An open-source (GPL-3) R package to generate static websites based on [R Markdown](http://rmarkdown.rstudio.com) and [Hugo](https://gohugo.io). You can install the package via CRAN or GitHub:
+An open-source (GPL-3) R package to generate static websites based on [R Markdown](https://rmarkdown.rstudio.com) and [Hugo](https://gohugo.io). You can install the package via CRAN or GitHub:
 
 ```r
 ## Install from CRAN
 install.packages('blogdown')
 
 ## Or, install from GitHub
-devtools::install_github('rstudio/blogdown')
+remotes::install_github('rstudio/blogdown')
 ```
 
 You may create a new site via the function `blogdown::new_site()` under an _empty_ directory. It will create a skeleton site, download a Hugo theme from Github,  add some sample content, launch a web browser and you will see the new site. The sample blog post `hello-world.Rmd` should be opened automatically, and you can edit it. The website will be automatically rebuilt and the page will be refreshed after you save the file.

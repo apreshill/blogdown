@@ -4,14 +4,27 @@
 \alias{install_theme}
 \title{Install a Hugo theme from Github}
 \usage{
-install_theme(theme, theme_example = FALSE, update_config = TRUE, force = FALSE)
+install_theme(
+  theme,
+  hostname = "github.com",
+  theme_example = FALSE,
+  update_config = TRUE,
+  force = FALSE,
+  update_hugo = TRUE
+)
 }
 \arguments{
-\item{theme}{A Hugo theme on Github (a chararacter string of the form
-\code{user/repo}, and you can optionally sepecify a GIT branch or tag name
+\item{theme}{A Hugo theme on Github (a character string of the form
+\code{user/repo}, and you can optionally specify a GIT branch or tag name
 after \code{@}, i.e. \code{theme} can be of the form
-\code{user/repo@branch}). If \code{theme = NA}, no themes will be
-installed, and you have to manually install a theme.}
+\code{user/repo@branch}). You can also specify a full URL to the zip file
+or tarball of the theme. If \code{theme = NA}, no themes will be installed,
+and you have to manually install a theme.}
+
+\item{hostname}{Where to find the theme. Defaults to \code{github.com};
+specify if you wish to use an instance of GitHub Enterprise. You can also
+specify the full URL of the zip file or tarball in \code{theme}, in which
+case this argument is ignored.}
 
 \item{theme_example}{Whether to copy the example in the \file{exampleSite}
 directory if it exists in the theme. Not all themes provide example sites.}
@@ -23,6 +36,9 @@ configurations.}
 have made changes to this existing theme, your changes will be lost when
 \code{force = TRUE}! Please consider backing up the theme by renaming it
 before you try \code{force = TRUE}.}
+
+\item{update_hugo}{Whether to automatically update Hugo if the theme requires
+a higher version of Hugo than the existing version in your system.}
 }
 \description{
 Download the specified theme from Github and install to the \file{themes}

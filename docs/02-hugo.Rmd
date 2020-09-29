@@ -6,7 +6,7 @@ In this chapter, we will briefly introduce\index{Hugo} Hugo (https://gohugo.io),
 
 A static site\index{Static Site} often consists of HTML files (with optional external dependencies like images and JavaScript libraries), and the web server sends exactly the same content to the web browser no matter who visits the web pages. There is no dynamic computing on the server when a page is requested. By comparison, a dynamic site relies on a server-side language to do certain computing and sends potentially different content depending on different conditions. A common language is PHP, and a typical example of a dynamic site is a web forum. For example, each user has a profile page, but typically this does not mean the server has stored a different HTML profile page for every single user. Instead, the server will fetch the user data from a database, and render the profile page dynamically.
 
-For a static site, each URL you visit often has a corresponding HTML file stored on the server, so there is no need to compute anything before serving the file to visitors. This means static sites tend to be faster in response time than dynamic sites, and they are also much easier to deploy, since deployment simply means copying static files to a server. A dynamic site often relies on databases, and you will have to install more software packages to serve a dynamic site. For more advantages of static sites, please read the [introduction](https://gohugo.io/overview/introduction/) on Hugo's website.
+For a static site, each URL you visit often has a corresponding HTML file stored on the server, so there is no need to compute anything before serving the file to visitors. This means static sites tend to be faster in response time than dynamic sites, and they are also much easier to deploy, since deployment simply means copying static files to a server. A dynamic site often relies on databases, and you will have to install more software packages to serve a dynamic site. For more advantages of static sites, please read the page "[Benefits of Static Site Generators](https://gohugo.io/about/benefits/)" on Hugo's website.
 
 There are many existing static site generators, including Hugo, [Jekyll,](http://jekyllrb.com) and [Hexo,](https://hexo.io) etc. Most of them can build general-purpose websites but are often used to build blogs.
 
@@ -222,18 +222,18 @@ In this section, we will explain how the default theme in **blogdown** works, wh
 
 ### The default theme
 
-The default theme in **blogdown**, hugo-lithium-theme\index{Hugo Lithium Theme}, is hosted on GitHub at https://github.com/yihui/hugo-lithium-theme. It was originally written by Jonathan Rutheiser, and I have made several changes to it. This theme is suitable for those who prefer minimal styles, and want to build a website with a few pages and some blog posts.
+The default theme in **blogdown**, hugo-lithium\index{Hugo Lithium Theme}, is hosted on GitHub at https://github.com/yihui/hugo-lithium. It was originally written by Jonathan Rutheiser, and I have made several changes to it. This theme is suitable for those who prefer minimal styles, and want to build a website with a few pages and some blog posts.
 
 Typically a theme repository on GitHub has a `README` file, which also serves as the documentation of the theme. After you read it, the next file to look for is `config.toml` under the `exampleSite` directory, which contains sample configurations for a website based on this theme. If a theme does not have a `README` file or `exampleSite` directory, you probably should not use it.
 
-The `config.toml` of the theme hugo-lithium-theme contains the following options:
+The `config.toml` of the theme `hugo-lithium` contains the following options:
 
 ```js
 baseurl = "/"
 relativeurls = false
 languageCode = "en-us"
 title = "A Hugo website"
-theme = "hugo-lithium-theme"
+theme = "hugo-lithium"
 googleAnalytics = ""
 disqusShortname = ""
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown", "_files$", "_cache$"]
@@ -254,13 +254,13 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown", "_files$", "_cache$"]
 [params]
     description = "A website built through Hugo and blogdown."
 
-    highlightjsVersion = "9.11.0"
-    highlightjsCDN = "//cdn.bootcss.com"
+    highlightjsVersion = "9.12.0"
+    highlightjsCDN = "//cdnjs.cloudflare.com/ajax/libs"
     highlightjsLang = ["r", "yaml"]
     highlightjsTheme = "github"
 
-    MathJaxCDN = "//cdn.bootcss.com"
-    MathJaxVersion = "2.7.1"
+    MathJaxCDN = "//cdnjs.cloudflare.com/ajax/libs"
+    MathJaxVersion = "2.7.5"
 
 [params.logo]
     url = "logo.png"
@@ -332,7 +332,7 @@ You can learn more about Hugo templates from the official documentation (https:/
 
 ### A minimal example
 
-[XMin](https://github.com/yihui/hugo-xmin) is a Hugo theme\index{XMin Theme} I wrote from scratch in about 12 hours. Roughly half an hour was spent on templates, 3.5 hours were spent on tweaking the CSS styles, and 8 hours were spent on the documentation (https://xmin.yihui.name). I think this may be a representative case of how much time you would spend on each part when designing a theme. It is perhaps our nature to spend much more time on cosmetic stuff like CSS than essential stuff like templates. Meanwhile, coding is often easier than documentation.
+[XMin](https://github.com/yihui/hugo-xmin) is a Hugo theme\index{XMin Theme} I wrote from scratch in about 12 hours. Roughly half an hour was spent on templates, 3.5 hours were spent on tweaking the CSS styles, and 8 hours were spent on the documentation (https://xmin.yihui.org). I think this may be a representative case of how much time you would spend on each part when designing a theme. It is perhaps our nature to spend much more time on cosmetic stuff like CSS than essential stuff like templates. Meanwhile, coding is often easier than documentation.
 
 We will show the source code of the XMin theme. Because the theme may be updated occasionally in the future, you may follow this link to obtain a fixed version that we will talk about in this section: https://github.com/yihui/hugo-xmin/tree/4bb305. Below is a tree view of all files and directories in the theme:
 
@@ -447,7 +447,7 @@ To understand `layouts/`, you must know some basics about HTML (see Section \@re
         </main>
         ```
         
-        For a full example of a single page, you may see https://xmin.yihui.name/about/.
+        For a full example of a single page, you may see https://xmin.yihui.org/about/.
 
     - `list.html` is the template\index{list.html} for rendering lists of pages, such as a list of blog posts, or a list of pages within a category or tag. Here is its source code:
 
@@ -478,9 +478,9 @@ To understand `layouts/`, you must know some basics about HTML (see Section \@re
         
         Next we generate the list using a loop (`range`) through all pages filtered by the condition that the section of a page should not be empty. "Section" in Hugo means the first-level subdirectory name under `content/`. For example, the section of `content/post/foo.md` is `post`. Therefore the filter means that we will list all pages under subdirectories of `content/`. This will exclude pages under the root `content/` directory, such as `content/about.md`.
         
-        Please note that the variable `.Data` is dynamic, and its value changes according to the specific list you want to generate. For example, the list page https://xmin.yihui.name/post/ only contains pages under `content/post/`, and https://xmin.yihui.name/note/ only contains pages under `content/note/`. These list pages are automatically generated by Hugo, and you do not need to explicitly loop through the sections `post` and `note`. That is, a single template `list.html` will generate multiple lists of pages according to the sections and taxonomy terms (e.g., categories and tags) you have on your website.
+        Please note that the variable `.Data` is dynamic, and its value changes according to the specific list you want to generate. For example, the list page https://xmin.yihui.org/post/ only contains pages under `content/post/`, and https://xmin.yihui.org/note/ only contains pages under `content/note/`. These list pages are automatically generated by Hugo, and you do not need to explicitly loop through the sections `post` and `note`. That is, a single template `list.html` will generate multiple lists of pages according to the sections and taxonomy terms (e.g., categories and tags) you have on your website.
 
-        The list items are represented by the HTML tags `<li>` in `<ul>`. Each item consists of the date, link, and title of a page. You may see https://xmin.yihui.name/post/ for a full example of a list page.
+        The list items are represented by the HTML tags `<li>` in `<ul>`. Each item consists of the date, link, and title of a page. You may see https://xmin.yihui.org/post/ for a full example of a list page.
 
     - `terms.html` is the template\index{terms.html} for the home page of taxonomy terms. For example, you can use it to generate the full list of categories or tags. The source code is below:
 
@@ -505,7 +505,7 @@ To understand `layouts/`, you must know some basics about HTML (see Section \@re
         
         Similar to `list.html`, it also uses a loop. The variable `.Data.Terms` stores all terms under a taxonomy, e.g., all category names. You can think of it as a named list in R (called a `map` in Go), with the names being the terms and the values being lists of pages. The variable `$key` denotes the term and `$value` denotes the list of pages associated with this term. What we render in each `<li>` is a link to the term page as well as the count of posts that used this term (`len` is a Go function that returns the length of an object).
         
-        Hugo automatically renders all taxonomy pages, and the path names are the plural forms of the taxonomies, e.g., https://xmin.yihui.name/categories/ and https://xmin.yihui.name/tags/. That is the meaning of `.Data.Plural`. The leading `$` is required because we are inside a loop, and need to access variables from the outside scope. The link of the term is passed to the Hugo function `relURL` via a pipe `|` to make it relative, which is good practice because relative links are more portable (independent of the domain name).
+        Hugo automatically renders all taxonomy pages, and the path names are the plural forms of the taxonomies, e.g., https://xmin.yihui.org/categories/ and https://xmin.yihui.org/tags/. That is the meaning of `.Data.Plural`. The leading `$` is required because we are inside a loop, and need to access variables from the outside scope. The link of the term is passed to the Hugo function `relURL` via a pipe `|` to make it relative, which is good practice because relative links are more portable (independent of the domain name).
 
 - The `partials/` directory is the place to put the HTML fragments to be reused by other templates via the `partial` function. We have four partial templates under this directory:
 
@@ -579,7 +579,7 @@ To understand `layouts/`, you must know some basics about HTML (see Section \@re
         
         ```js
         [params]
-            footer = "&copy; [Yihui Xie](https://yihui.name) 2017"
+            footer = "&copy; [Yihui Xie](https://yihui.org) 2017"
         ```
 
 There is a special template `404.html`, which Hugo uses to create the 404\index{404.html} page (when a page is not found, this page is displayed):
@@ -735,22 +735,22 @@ The XMin is actually a highly functional theme, but we understand that it may be
     </script>
     ```
     
-    Remember to replace `YOUR-CDN-LINK` with the link to your preferred CDN host of highlight.js, e.g., `cdn.bootcss.com/highlight.js/9.12.0`. For more information about highlight.js, please see its homepage: https://highlightjs.org. If you need to use other CDN hosts, cdnjs.com is a good choice: https://cdnjs.com/libraries/highlight.js You can also see which languages and CSS themes are supported there.
+    Remember to replace `YOUR-CDN-LINK` with the link to your preferred CDN host of highlight.js, e.g., `cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0`. For more information about highlight.js, please see its homepage: https://highlightjs.org. If you need to use other CDN hosts, cdnjs.com is a good choice: https://cdnjs.com/libraries/highlight.js You can also see which languages and CSS themes are supported there.
     
     You may see https://github.com/yihui/hugo-xmin/pull/5 for an actual implementation, and a sample page with syntax highlighting at https://deploy-preview-5--hugo-xmin.netlify.com/post/2016/02/14/a-plain-markdown-post/.
 
 - **Support math expressions through MathJax.** Add the code below\index{MathJax} to `foot_custom.html`.
 
     ```html
-    <script src="//yihui.name/js/math-code.js"></script>
+    <script src="//yihui.org/js/math-code.js"></script>
     <script async
-    src="//cdn.bootcss.com/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
+    src="//YOUR-CDN-LINK/MathJax.js?config=TeX-MML-AM_CHTML">
     </script>
     ```
     
     This requires substantial knowledge of JavaScript and familiarity with MathJax to fully understand the code above, and we will leave the explanation of the code to Section \@ref(javascript).
     
-    Note that bootcss.com is only one possible CDN host of MathJax, and you are free to use other hosts.
+    Remember to replace `YOUR-CDN-LINK` with the link to your preferred CDN host of MathJax, e.g., `cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5`.
 
 - **Show the table of contents (TOC).** To show a TOC\index{Table of Contents} for R Markdown posts, you only need to add the output format `blogdown::html_page` with the option `toc: true` to YAML:
 

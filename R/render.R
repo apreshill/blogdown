@@ -20,7 +20,9 @@
 #' command line \command{Rscript "R/build.R"}, which means it is executed in a
 #' separate R session. The value of the argument \code{local} is passed to the
 #' command line (you can retrieve the command-line arguments via
-#' \code{\link{commandArgs}(TRUE)}).
+#' \code{\link{commandArgs}(TRUE)}). For \code{method = "html"}, the R script
+#' \file{R/build2.R} (if exists) will be executed after Hugo has built the site.
+#' This can be useful if you want to post-process the site.
 #' @param local Whether to build the website locally to be served via
 #'   \code{\link{serve_site}()}.
 #' @param method Different methods to build a website (each with pros and cons).
@@ -28,6 +30,10 @@
 #'   option \code{getOption('blogdown.method')} when it is set.
 #' @param run_hugo Whether to run \code{hugo_build()} after R Markdown files are
 #'   compiled.
+#' @note This function recompiles all R Markdown files by default, even if the
+#'   output files are newer than the source files. If you want to build the site
+#'   without rebuilding all R Markdown files, you should use
+#'   \code{\link{hugo_build}()} instead.
 #' @export
 build_site = function(
   local = FALSE, method = c('html', 'custom'), run_hugo = TRUE
@@ -38,10 +44,11 @@ build_site = function(
   if (method == 'custom') return()
   files = list_rmds('content', TRUE)
   if (local && length(files)) {
-    files = files[mapply(require_rebuild, output_file(files), files)]
+    files = getOption('blogdown.files_filter', timestamp_filter)(files)
   }
   build_rmds(files)
   if (run_hugo) on.exit(hugo_build(local), add = TRUE)
+  on.exit(run_script('R/build2.R', as.character(local)), add = TRUE)
   invisible()
 }
 
@@ -50,10 +57,16 @@ list_rmds = function(dir, check = FALSE) {
   # exclude Rmd that starts with _ (preserve these names for, e.g., child docs)
   # but include _index.Rmd/.md
   files = files[!grepl('^_', basename(files)) | grepl('^_index[.]', basename(files))]
+  # exclude Rmd within packrat / renv library
+  files = files[!grepl('/(?:packrat|renv)/', files)]
   # do not allow special characters in filenames so dependency names are more
   # predictable, e.g. foo_files/
   if (check) bookdown:::check_special_chars(files)
   files
+}
+
+timestamp_filter = function(files) {
+  files[mapply(require_rebuild, output_file(files), files)]
 }
 
 # raw indicates paths of dependencies are not encoded in the HTML output
@@ -95,13 +108,19 @@ build_rmds = function(files) {
       write_utf8(x, out)
     } else {
       if (getOption('blogdown.widgetsID', TRUE)) x = clean_widget_html(x)
-      prepend_yaml(f, out, x)
+      prepend_yaml(f, out, x, callback = function(s) {
+        if (!getOption('blogdown.draft.output', FALSE)) return(s)
+        if (length(s) < 2 || length(grep('^draft: ', s)) > 0) return(s)
+        append(s, 'draft: yes', 1)
+      })
     }
   }
 }
 
 render_page = function(input, script = 'render_page.R') {
-  args = c(pkg_file('scripts', script), input, getwd())
+  # needs --slave due to this bug in Rscript:
+  # https://stat.ethz.ch/pipermail/r-devel/2018-April/075897.html
+  args = c('--slave', pkg_file('scripts', script), input, getwd())
   if (Rscript(shQuote(args)) != 0) stop("Failed to render '", input, "'")
 }
 

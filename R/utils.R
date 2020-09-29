@@ -36,6 +36,11 @@ pkg_file = function(..., mustWork = TRUE) {
   system.file(..., package = 'blogdown', mustWork = mustWork)
 }
 
+# tempfile under the current working directory
+wd_tempfile = function(..., pattern = '') {
+  basename(tempfile(pattern, '.', ...))
+}
+
 # only copy files/dirs if they exist
 file.copy2 = function(from, to, ...) {
   i = file.exists(from); from = from[i]
@@ -85,12 +90,16 @@ require_rebuild = function(html, rmd) {
 #' @param dir A directory path.
 #' @param force Whether to force building all Rmd files. By default, an Rmd file
 #'   is built only if it is newer than its output file(s).
+#' @param ignore A regular expression to match output filenames that should be
+#'   ignored when testing if the modification time of the Rmd source file is
+#'   newer than its output files.
 #' @export
-build_dir = function(dir = '.', force = FALSE) {
+build_dir = function(dir = '.', force = FALSE, ignore = '[.]Rproj$') {
   for (f in list_rmds(dir)) {
     render_it = function() render_page(f, 'render_rmarkdown.R')
     if (force) { render_it(); next }
     files = list.files(dirname(f), full.names = TRUE)
+    files = grep(ignore, files, value = TRUE, invert = TRUE)
     i = files == f  # should be only one in files matching f
     bases = with_ext(files, '')
     files = files[!i & bases == bases[i]]  # files with same basename as f (Rmd)
@@ -102,9 +111,33 @@ older_than = function(file1, file2) {
   !file_exists(file1) | file_test('-ot', file1, file2)
 }
 
-is_windows = function() .Platform$OS.type == 'windows'
-is_osx = function() Sys.info()[['sysname']] == 'Darwin'
-is_linux = function() Sys.info()[['sysname']] == 'Linux'
+# filter files by checking if their MD5 checksums have changed
+md5sum_filter = function(files) {
+  opt = options(stringsAsFactors = FALSE); on.exit(options(opt), add = TRUE)
+  md5 = data.frame(file = files, checksum = tools::md5sum(files))  # new checksums
+  if (!file.exists(f <- 'blogdown/md5sum.txt')) {
+    dir_create('blogdown')
+    write.table(md5, f, row.names = FALSE)
+    return(files)
+  }
+  old = read.table(f, TRUE)  # old checksums (2 columns: file path and checksum)
+  one = merge(md5, old, 'file', all = TRUE, suffixes = c('', '.old'))
+  # exclude files if checksums are not changed
+  files = setdiff(files, one[one[, 2] == one[, 3], 'file'])
+  i = is.na(one[, 2])
+  one[i, 2] = one[i, 3]  # update checksums
+  write.table(one[, 1:2], f, row.names = FALSE)
+  files
+}
+
+is_windows = function() xfun::is_windows()
+is_osx = function() xfun::is_macos()
+is_linux = function() xfun::is_linux()
+
+# guess if the OS is 64bit
+is_64bit = function() {
+  length(grep('64', unlist(Sys.info()[c('machine', 'release')]))) > 0
+}
 
 is_rmarkdown = function(x) grepl('[.][Rr]markdown$', x)
 
@@ -113,60 +146,26 @@ output_file = function(file, md = is_rmarkdown(file)) {
   with_ext(file, ifelse(md, 'markdown', 'html'))
 }
 
-# adapted from webshot:::download_no_libcurl due to the fact that
-# download.file() cannot download Github release assets:
-# https://stat.ethz.ch/pipermail/r-devel/2016-June/072852.html
-download2 = function(url, ...) {
-  download = function(method = 'auto', extra = getOption('download.file.extra')) {
-    download.file(url, ..., method = method, extra = extra)
-  }
-  if (is_windows()) for (method in c('libcurl', 'wininet', 'auto')) {
-    if (!inherits(try(res <- download(method = method)), 'try-error') && res == 0) return(res)
-  }
-
-  R340 = getRversion() >= '3.4.0'
-  if (R340 && download() == 0) return(0L)
-  # if non-Windows, check for libcurl/curl/wget/lynx, call download.file with
-  # appropriate method
-  res = NA
-  if (Sys.which('curl') != '') {
-    # curl needs to add a -L option to follow redirects
-    if ((res <- download(method = 'curl', extra = '-L')) == 0) return(res)
-  }
-  if (Sys.which('wget') != '') {
-    if ((res <- download(method = 'wget')) == 0) return(res)
-  }
-  if (Sys.which('lynx') != '') {
-    if ((res <- download(method = 'lynx')) == 0) return(res)
-  }
-  if (is.na(res)) stop('no download method found (wget/curl/lynx)')
-
-  res
-}
-
 opts = knitr:::new_defaults()
 
 # read config file and cache the options (i.e. do not read again unless the config is newer)
 load_config = function() {
   config = opts$get('config')
-
+  owd = setwd(site_root()); on.exit(setwd(owd), add = TRUE)
+  f = find_config(); m = file.info(f)[, 'mtime']
   # read config only if it has been updated
-  read_config = function(f, parser) {
-    if (!is.null(time <- attr(config, 'config_time')) &&
-        time == file.info(f)[, 'mtime']) return(config)
-    config = parser(f)
-    attr(config, 'config_time') = file.info(f)[, 'mtime']
-    opts$set(config = config)
-    check_config(config, f)
-  }
+  if (identical(attr(config, 'config_time'), m)) return(config)
+  parser = switch(f, 'config.toml' = parse_toml, 'config.yaml' = yaml_load_file)
+  config = parser(f)
+  attr(config, 'config_time') = m
+  attr(config, 'config_content') = read_utf8(f)
+  opts$set(config = config)
+  check_config(config, f)
+}
 
-  find_config()
-
-  if (file_exists('config.toml'))
-    return(read_config('config.toml', parse_toml))
-
-  if (file_exists('config.yaml'))
-    return(read_config('config.yaml', yaml_load_file))
+# check if the user has configured Multilingual Mode for Hugo in config.toml
+check_lang = function(config = load_config()) {
+  get_config('DefaultContentLanguage', NULL, config)
 }
 
 check_config = function(config, f) {
@@ -195,7 +194,9 @@ is_example_url = function(url) {
 }
 
 # only support TOML and YAML (no JSON)
-find_config = function(files = c('config.toml', 'config.yaml'), error = TRUE) {
+config_files = c('config.toml', 'config.yaml')
+
+find_config = function(files = config_files, error = TRUE) {
   f = existing_files(files, first = TRUE)
   if (length(f) == 0 && error) stop(
     'Cannot find the configuration file ', paste(files, collapse = ' | '), ' of the website'
@@ -204,43 +205,47 @@ find_config = function(files = c('config.toml', 'config.yaml'), error = TRUE) {
 }
 
 # figure out the possible root directory of the website
-site_root = function(...) {
+site_root = function(config = config_files) {
+  if (!is.null(root <- opts$get('site_root'))) return(root)
   owd = getwd(); on.exit(setwd(owd), add = TRUE)
-  while (length(find_config(error = FALSE, ...)) == 0) {
+  paths = NULL
+  while (length(find_config(config, error = FALSE)) == 0) {
     w1 = getwd(); w2 = dirname(w1)
+    paths = c(paths, w1)
     if (w1 == w2) stop(
-      'Cannot find a website under the current working directory or upper-level directories'
+      'Could not find ', paste(config, collapse = ' / '), ' under\n',
+      paste('  ', paths, collapse = '\n')
     )
     setwd('..')
   }
-  getwd()
+  root = getwd(); opts$set(site_root = root)
+  root
 }
 
 # a simple parser that only reads top-level options unless RcppTOML is available
-parse_toml = function(
-  f, x = read_utf8(f), strict = requireNamespace('RcppTOML', quietly = TRUE)
-) {
+parse_toml = function(f, x = read_utf8(f), strict = xfun::loadable('RcppTOML')) {
   if (strict) {
-    if (no_file <- missing(f)) f = paste(x, collapse = '\n')
-    return(RcppTOML::parseTOML(f, fromFile = !no_file))
+    x = paste(x, collapse = '\n')
+    parser = getFromNamespace('parseTOML', 'RcppTOML')
+    return(parser(x, fromFile = FALSE))
   }
   # remove comments
   x = gsub('\\s+#.+', '', x)
   z = list()
   # arbitrary values
-  r = '^([[:alnum:]]+?)\\s*=\\s*(.+)\\s*$'
+  r = '^([[:alnum:]_]+?)\\s*=\\s*(.+)\\s*$'
   y = grep(r, x, value = TRUE)
   z[gsub(r, '\\1', y)] = as.list(gsub(r, '\\2', y))
   # strings
-  r = '^([[:alnum:]]+?)\\s*=\\s*"([^"]*?)"\\s*$'
+  r = '^([[:alnum:]_]+?)\\s*=\\s*"([^"]*?)"\\s*$'
   y = grep(r, x, value = TRUE)
   z[gsub(r, '\\1', y)] = as.list(gsub(r, '\\2', y))
   # boolean
-  r = '^([[:alnum:]]+?)\\s*=\\s*(true|false)\\s*$'
+  r = '^([[:alnum:]_]+?)\\s*=\\s*(true|false)\\s*$'
   y = grep(r, x, value = TRUE)
   z[gsub(r, '\\1', y)] = as.list(as.logical(gsub(r, '\\2', y)))
   # numbers
-  r = '^([[:alnum:]]+?)\\s*=\\s*([0-9.]+)\\s*$'
+  r = '^([[:alnum:]_]+?)\\s*=\\s*([0-9.]+)\\s*$'
   y = grep(r, x, value = TRUE)
   z[gsub(r, '\\1', y)] = lapply(as.list(as.numeric(gsub(r, '\\2', y))), function(v) {
     v2 = as.integer(v)
@@ -274,27 +279,52 @@ open_file = function(x) {
 }
 
 # produce a dash-separated filename by replacing non-alnum chars with -
-dash_filename = function(string, pattern = '[^[:alnum:]]+') {
-  tolower(gsub('^-+|-+$', '', gsub(pattern, '-', string)))
+dash_filename = function(
+  string, pattern = '[^[:alnum:]]+',
+  pre = getOption('blogdown.filename.pre_processor', identity)
+) {
+  tolower(gsub('^-+|-+$', '', gsub(pattern, '-', pre(string))))
 }
 
 # return a filename for a post based on title, date, etc
-post_filename = function(title, subdir, ext, date) {
-  file = paste0(dash_filename(title), ext)
+post_filename = function(
+  title, subdir, ext, date, lang = '', bundle = getOption('blogdown.new_bundle', FALSE)
+) {
+  if (is.null(lang)) lang = ''
+  file = dash_filename(title)
   d = dirname(file); f = basename(file)
   if (is.null(subdir) || subdir == '') subdir = '.'
   d = if (d == '.') subdir else file.path(subdir, d)
   d = gsub('/+$', '', d)
-  if (length(date) == 0 || is.na(date)) date = ''
-  date = format(date)
-  # FIXME: this \\d{4} will be problematic in about 8000 years
-  if (date != '' && !grepl('^\\d{4}-\\d{2}-\\d{2}-', f)) f = paste(date, f, sep = '-')
-  gsub('^([.]/)+', '', file.path(d, f))
+  f = date_filename(f, date)
+  f = gsub('^([.]/)+', '', file.path(d, f))
+  paste0(f, if (bundle) '/index', if (lang != '') '.', lang, ext)
 }
 
-# give a filename, return a slug by removing the date and extension
+date_filename = function(path, date, replace = FALSE) {
+  if (length(date) == 0 || is.na(date)) date = ''
+  date = format(date)
+  if (date == '') return(path)
+  # FIXME: this \\d{4} will be problematic in about 8000 years
+  m = grepl(r <- '(^|[\\/])\\d{4}-\\d{2}-\\d{2}-', path)
+  if ( replace &&  m) path = gsub(r, paste0('\\1', date, '-'), path)
+  if (!replace && !m) path = paste(date, path, sep = '-')
+  path
+}
+
+# give a filename, return a slug by removing the date and extension (and possible index.md)
 post_slug = function(x) {
-  trim_ws(gsub('^\\d{4}-\\d{2}-\\d{2}-|[.][[:alnum:]]+$', '', basename(x)))
+  x = gsub('([.][[:alnum:]]+){1,2}$', '', x)
+  if (basename(x) == 'index') x = dirname(x)
+  trim_ws(gsub('^\\d{4}-\\d{2}-\\d{2}-', '', basename(x)))
+}
+
+auto_slug = function() {
+  if (!getOption('blogdown.new_bundle', FALSE)) return(TRUE)
+  cfg = load_config()
+  if (length(cfg[['permalinks']]) > 0) return(TRUE)
+  con = attr(cfg, 'config_content')
+  length(grep('permalinks', con)) > 0
 }
 
 trim_ws = function(x) gsub('^\\s+|\\s+$', '', x)
@@ -309,18 +339,10 @@ expand_grid = function(...) {
 }
 
 by_products = function(x, suffix = c('_files', '_cache', '.html')) {
-  sx = knitr:::sans_ext(x)
+  sx = xfun::sans_ext(x)
   if (length(suffix) == 1) return(paste0(sx, suffix))
   ma = expand_grid(suffix, sx)
   if (nrow(ma) > 0) paste0(ma[, 2], ma[, 1])
-}
-
-new_post_addin = function() {
-  sys.source(pkg_file('scripts', 'new_post.R'))
-}
-
-update_meta_addin = function() {
-  sys.source(pkg_file('scripts', 'update_meta.R'))
 }
 
 rmd_pattern = '[.][Rr](md|markdown)$'
@@ -436,8 +458,7 @@ split_yaml_body = function(x) {
 # anotate seq type values because both single value and list values are
 # converted to vector by default
 yaml_load = function(x) yaml::yaml.load(
-  paste(x, collapse = '\n'),
-  handlers = list(
+  x, handlers = list(
     seq = function(x) {
       # continue coerce into vector because many places of code already assume this
       if (length(x) > 0) {
@@ -449,13 +470,7 @@ yaml_load = function(x) yaml::yaml.load(
   )
 )
 
-# remove the three dashes in the YAML file before parsing it (the yaml package
-# cannot handle three dashes)
-yaml_load_file = function(f) {
-  x = paste(read_utf8(f), collapse = '\n')
-  x = gsub('^\\s*---\\s*|\\s*---\\s*$', '', x)
-  yaml::yaml.load(x)
-}
+yaml_load_file = function(...) yaml::yaml.load_file(...)
 
 # if YAML contains inline code, evaluate it and return the YAML
 fetch_yaml2 = function(f) {
@@ -520,8 +535,8 @@ modify_yaml = function(
 }
 
 # prepend YAML of one file to another file
-prepend_yaml = function(from, to, body = read_utf8(to)) {
-  x = c(fetch_yaml2(from), '', body)
+prepend_yaml = function(from, to, body = read_utf8(to), callback = identity) {
+  x = c(callback(fetch_yaml2(from)), '', body)
   write_utf8(x, to)
 }
 
@@ -585,14 +600,7 @@ clean_widget_html = function(x) {
 }
 
 decode_uri = function(...) httpuv::decodeURIComponent(...)
-encode_uri = function(...) {
-  # httpuv <= 1.3.5 is buggy: https://github.com/rstudio/httpuv/issues/86
-  if (packageVersion('httpuv') > '1.3.5') {
-    httpuv::encodeURIComponent(...)
-  } else {
-    URLencode(...)
-  }
-}
+encode_uri = function(...) httpuv::encodeURIComponent(...)
 
 # convert arguments to a single string of the form "arg1=value1 arg2=value2 ..."
 args_string = function(...) {
@@ -611,4 +619,46 @@ args_string = function(...) {
     if (any(m == '')) stop('All arguments must be either named or unnamed')
     paste(m, '=', v, sep = '', collapse = ' ')
   }
+}
+
+is_rstudio_server = local({
+  x = NULL
+  function() {
+    if (!is.null(x)) return(x)
+    x <<- tryCatch(
+      tolower(rstudioapi::versionInfo()$mode) == 'server',
+      error = function(e) FALSE
+    )
+  }
+})
+
+tweak_hugo_env = function() {
+  if (!is_rstudio_server()) return()
+  Sys.setenv(HUGO_RELATIVEURLS = 'true')
+  do.call(
+    on.exit, list(substitute(Sys.unsetenv('HUGO_RELATIVEURLS')), add = TRUE),
+    envir = parent.frame()
+  )
+}
+
+get_author = function() {
+  if (!is.null(a <- getOption('blogdown.author'))) return(a)
+  if (xfun::loadable('whoami')) whoami::fullname('') else ''
+}
+
+get_subdirs = function() {
+  owd = setwd(content_file()); on.exit(setwd(owd), add = TRUE)
+  files = list.files(full.names = TRUE, recursive = TRUE, include.dirs = TRUE)
+  files = sub('^[.]/', '', files)
+  i = file_test('-d', files)
+  dirs = files[i]
+  dirs = dirs[!grepl('_(files|cache)/?$', dirs)]
+
+  # exclude dirs that contain index.??? files
+  files = files[!i]
+  for (d in dirname(files[xfun::sans_ext(basename(files)) == 'index'])) {
+    dirs = dirs[substr(dirs, 1, nchar(d)) != d]
+  }
+
+  union(dirs, getOption('blogdown.subdir', 'post'))
 }
