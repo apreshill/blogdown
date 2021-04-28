@@ -94,7 +94,7 @@ These functions will show you what is checked, why, and will assign you some `[T
     | Let's check out your blogdown site!
     ------------------------------------------------------------
 
-We hope you'll find the checks as helpful as [several](https://github.com/rstudio/blogdown/issues/548) other [users](https://github.com/rstudio/blogdown/issues/510) have. When in doubt, if you are experiencing any issues with building your site locally, run `blogdown::check_site()` to see if it uncovers any new problems.
+When in doubt, if you are experiencing any issues with building your site locally, run `blogdown::check_site()` to see if it uncovers any new problems.
 
 
 ## Global options\index{Global Options}
@@ -281,6 +281,14 @@ If you want to update Hugo, you'll need to install a new version now using `inst
 
 ## .Rmd vs. .Rmarkdown vs. .md {#output-format}
 
+**blogdown** lets you work with three formats for your website content, each of which is processed and rendered slightly differently:
+
+| File format  |     | Processed by |     | Output format |     | Additional processing by |
+|--------------|-----|--------------|-----|---------------|-----|--------------------------|
+| `.Rmd`       | →   | Pandoc       | →   | `.html`       |     |                          |
+| `.Rmarkdown` | →   | Pandoc       | →   | `.markdown`   | →   | Hugo / Goldmark          |
+| `.md`        | →   |              | →   | `.md`         | →   | Hugo / Goldmark          |
+
 If you are not familiar with R Markdown\index{R Markdown}, please see Appendix \@ref(r-markdown) for a quick tutorial. When you create a new post, you have to decide whether you want to use R Markdown or plain Markdown\index{Markdown}, as you can see from Figure \@ref(fig:new-post). 
 
 Table \@ref(tab:md-diff) summarizes the main differences between the three options, followed by detailed explanations below.
@@ -388,4 +396,24 @@ It is not recommended to change the **knitr** chunk options `fig.path` or `cache
 
 If you are working on an R Markdown post, but do not want **blogdown** to compile it, you can temporarily change its filename extension from `.Rmd` to another unknown extension such as `.Rmkd`.
 
-## Building vs serving the site {#build-serve}
+Of course, you may always use `.md` for content that does not include any R code---this content will only be processed by Hugo's Markdown renderer (the default now is Goldmark). Content written in `.Rmd` files will be rendered with Pandoc straight to `.html`, bypassing Hugo's markdown renderer completely. However, some Hugo themes depend on Markdown files as input (not `.html`)---that is why the `.Rmarkdown` file extension has existed. `.Rmarkdown` files are rendered to `.markdown` using **knitr** and Pandoc, which will then be processed by Hugo Markdown renderer. This special file extension (unique to **blogdown**) means that the file will be processed by R before Hugo, allowing you to use R code, which a plain `.md` will not allow.
+
+With **blogdown** 1.0, the `.Rmarkdown` file format has become more fully featured, to help users take better advantage of some Hugo theme features and configuration options. `.Rmarkdown` files now support bibliographies and HTML widgets like a standard `.Rmd` document. This makes `.Rmarkdown` an interesting format to be used alone in **blogdown** projects. However, some users voiced a need to be able to simply keep the `.md` version of their `.Rmd` content, without needing to use the special `.Rmarkdown` file extension.
+
+**blogdown** now offers a build method to render `.Rmd` files to `.md` instead of `.html`. This special *full markdown mode* can be activated by setting `options(blogdown.method = "markdown")` in your `.Rprofile`.
+
+We recommend this `"markdown"` mode to advanced users who have a high comfort level with Hugo, and want to use the full power of Goldmark (and understand the trade-offs of not using Pandoc for rendering here, e.g., not all Pandoc's Markdown features are supported by Goldmark).
+
+
+## Build site {#build-site}
+
+If you miss the `public/` folder and want it back, you'll need to build the site explicitly via `blogdown::build_site()`, or if you use RStudio, press `Ctrl + Shift + B` or `Cmd + Shift + B` to build the website. This function no longer recompiles R Markdown files by default, because it may be expensive and often undesirable to compile `.Rmd` files that have been compiled before.
+
+If you do want to do that anyway, `build_site(build_rmd = TRUE)` will recompile *everything* (look out!). For easier control, this `build_rmd` argument can also take a function to filter the files to re-render when building the site. We have introduced 3 helpers functions (and you can use your own) with an alias each for ease of use:
+
+-   `build_site(build_rmd = 'timestamp')` uses `filter_timestamp()` and will compare the timestamp of input and output files to decide which to render.
+-   `build_site(build_rmd = 'newfile')` uses `filter_newfile()` and will render only files that have no output file yet.
+-   `build_site(build_rmd = 'md5sum')` uses `filter_md5sum()` and will compare MD5 checksums of files to decide to render.
+
+See the help page `?blogdown::build_site` for more information.
+
